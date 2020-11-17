@@ -16,6 +16,8 @@ ads = ADS.ADS1115(i2c)
 # Create single-ended input on channel 0
 chan = AnalogIn(ads, ADS.P0)
 
+chan = AnalogIn(ads, ADS.P1)
+
 # Create differential input between channel 0 and 1
 # chan = AnalogIn(ads, ADS.P0, ADS.P1)
 
@@ -32,5 +34,15 @@ while True:
     print("On: {:>5}\t{:>5.3f}".format(chan.value, chan.voltage))
     relay.on()
 
-
 #relay2 = OutputDevice(27, active_high=False, initial_value=False)
+
+relay2 = OutputDevice(27, active_high=False, initial_value=False)
+
+while True:
+  sleep(5)
+  if (chan.voltage < 2.0):
+    print("Off: {:>5}\t{:>5.3f}".format(chan.value, chan.voltage))
+    relay.off()
+  else:
+    print("On: {:>5}\t{:>5.3f}".format(chan.value, chan.voltage))
+    relay.on()
