@@ -23,6 +23,13 @@ chan2 = AnalogIn(ads, ADS.P1)
 relay1 = OutputDevice(17, active_high=False, initial_value=False)
 relay2 = OutputDevice(27, active_high=False, initial_value=False)
 
+# Probe calibration parameters
+probe1wet = 1.135
+probe1dry = 2.265
+probe2wet = 1.180
+probe2dry = 2.330
+
+
 print("Chan 1:\t{:>5}\t{:>5}\t\tChan 2:\t{:>5}\t{:>5}".format("raw", "v", "raw", "v"))
 
 while True:
