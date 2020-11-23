@@ -80,11 +80,15 @@ print("P1:\t{:>5}\t{:>5}\t{:>5}\t\tP2:\t{:>5}\t{:>5}\t{:>5}".format("raw", "v", 
 
 while True:
 
+  if (len(waterTimingsPump1) == maxPumpActivationsPerDay)
+    timeNow = datetime.now()
+    elapsed = timenow - waterTimingsPump1[0]
+    print(elapsed.hours)
 
 
 
-  if (len(waterTimingsPump1) < maxPumpActivationsPerDay):
-    print(len(waterTimingsPump1))
+  #if (len(waterTimingsPump1) < maxPumpActivationsPerDay):
+    #Check to see
 
 #  if (probe1MoistureRatio > pumpToggleRatio):
 
