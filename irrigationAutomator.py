@@ -5,23 +5,7 @@ import busio
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 import datetime
-from datetime import datetime, date, time, timedelta
-
-#datetime1 = datetime.min
-#print(datetime1)
-
-#sleep(5)
-
-#datetime2 = datetime.now()
-#print(datetime2)
-
-# elapsed is a timedelta object
-#elapsed = datetime2 - datetime1
-#print(elapsed)
-
-#print(isinstance(elapsed, timedelta))
-
-#print(elapsed.seconds)
+from datetime import datetime, timedelta
 
 
 # Create the I2C bus
@@ -57,15 +41,24 @@ probe2range = probe2dry - probe2wet
 
 # Constants
 
+totalSecondsInDay = 86400.0
+
+wateringCheckInterval = 3600 #Check every hour
+
 pumpToggleThreshold = 0.7
 
-maxWaterPumpingPerDayInSeconds = 60
-maxWaterPumpingPerActivationInSeconds = 15
-maxPumpActivationsPerDay = int(maxWaterPumpingPerDayInSeconds / maxWaterPumpingPerActivationInSeconds)
-
-print(maxPumpActivationsPerDay)
-
 postWaterDelayCheck = 60
+
+maxWaterPumpingPerDayInSeconds = 32
+maxWaterPumpingPerActivationInSeconds = 8
+maxPumpActivationsPerDay = int(maxWaterPumpingPerDayInSeconds / maxWaterPumpingPerActivationInSeconds)
+#print(maxPumpActivationsPerDay)
+
+preWateringMessage = "{0}\tPre Water Probe Reading\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f} --- Watering time: {3} seconds"
+postWateringMessage = "{0}\tPost Watering Probe Reading\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f}"
+maxWateringWarning = "{0}\tWARNING: Max watering threshold reached. Unable to water until {1}."
+baseReadingMessage = "{0}\tProbe Reading\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f}"
+
 
 
 
@@ -73,45 +66,86 @@ postWaterDelayCheck = 60
 
 # Variables
 waterTimingsPump1 = []
-waterTimingsPump2 = []
+#waterTimingsPump2 = []
 
 
-print("P1:\t{:>5}\t{:>5}\t{:>5}\t\tP2:\t{:>5}\t{:>5}\t{:>5}".format("raw", "v", "%", "raw", "v", "%"))
+
+#testTime = datetime(2020, 11, 23, 12, 0, 0, 0)
+#waterTimingsPump1.append(testTime)
+#print(len(waterTimingsPump1))
+#print(waterTimingsPump1[0])
+
+
+#print("P1:\t{:>5}\t{:>5}\t{:>5}\t\tP2:\t{:>5}\t{:>5}\t{:>5}".format("raw", "v", "%", "raw", "v", "%"))
 
 while True:
 
-  if (len(waterTimingsPump1) == maxPumpActivationsPerDay)
+
+  # Check oldest entry for potential removal
+  if (len(waterTimingsPump1) != 0):
     timeNow = datetime.now()
-    elapsed = timenow - waterTimingsPump1[0]
-    print(elapsed.hours)
+    elapsed = timeNow - waterTimingsPump1[0]
+    #print(elapsed.total_seconds())
+
+    if(elapsed.total_seconds() > totalSecondsInDay):
+      #print("Removing {0}".format(waterTimingsPump1[0]))
+      waterTimingsPump1.pop(0)
 
 
 
-  #if (len(waterTimingsPump1) < maxPumpActivationsPerDay):
-    #Check to see
-
-#  if (probe1MoistureRatio > pumpToggleRatio):
-
-
-
-  sleep(1)
-
+  # Check the probe to see if should water
   probe1MoistureRatio = (chan1.voltage - probe1wet) / probe1range
-  probe2MoistureRatio = (chan2.voltage - probe2wet) / probe2range
 
-  if (probe1MoistureRatio < pumpToggleThreshold):
-    chan1result = "P1-Off:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan1.value, chan1.voltage, probe1MoistureRatio)
-    relay1.off()
+  if (probe1MoistureRatio > pumpToggleThreshold):
+
+    # Ensure max watering threshold not exceeded
+    if (len(waterTimingsPump1) < maxPumpActivationsPerDay):
+
+      # Safe to water
+      print(preWateringMessage.format(datetime.now(), chan1.voltage, probe1MoistureRatio, maxWaterPumpingPerActivationInSeconds))
+
+      relay1.on()
+      sleep(maxWaterPumptingPerActivationInSeconds)
+      relay1.off()
+      sleep(postWaterDelayCheck)
+
+      probe1MoistureRatio = (chan1.voltage - probe1wet) / probe1range
+      print(postWateringMessage.format(datetime.now(), chan1.voltage, probe1MoistureRatio))
+
+    else:
+
+      # Unable to water due to max threshold reached.
+      timeNow = datetime.now()
+      timeNext = waterTimingsPump1[0] + timedelta(days=1)
+
+      print(maxWateringWarning.format(timeNow, timeNext))
+      print(baseReadingMessage.format(timeNow, chan1.voltage, probe1MoistureRatio))
+
   else:
-    chan1result = "P1-On:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan1.value, chan1.voltage, probe1MoistureRatio)
-    relay1.on()
 
-  if (probe2MoistureRatio < pumpToggleThreshold):
-    chan2result = "P2-Off:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan2.value, chan2.voltage, probe2MoistureRatio)
-    relay2.off()
-  else:
-    chan2result = "P2-On:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan2.value, chan2.voltage, probe2MoistureRatio)
-    relay2.on()
+    # Not time to water yet
+    print(baseReadingMessage.format(datetime.now(), chan1.voltage, probe1MoistureRatio))
 
-  print(chan1result + "\t\t" + chan2result)
+
+  # TODO: Would need to repeat the code above for the 2nd pump relay...
+
+
+  # Sleep until next check in timing.
+  sleep(wateringCheckInterval)
+
+
+
+#  probe2MoistureRatio = (chan2.voltage - probe2wet) / probe2range
+
+#  if (probe1MoistureRatio < pumpToggleThreshold):
+#    chan1result = "P1-Off:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan1.value, chan1.voltage, probe1MoistureRatio)
+#  else:
+#    chan1result = "P1-On:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan1.value, chan1.voltage, probe1MoistureRatio)
+
+#  if (probe2MoistureRatio < pumpToggleThreshold):
+#    chan2result = "P2-Off:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan2.value, chan2.voltage, probe2MoistureRatio)
+#  else:
+#    chan2result = "P2-On:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan2.value, chan2.voltage, probe2MoistureRatio)
+
+#  print(chan1result + "\t\t" + chan2result)
 
