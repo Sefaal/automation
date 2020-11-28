@@ -39,11 +39,12 @@ probe2range = probe2dry - probe2wet
 #print("probe2range result: {:>5.3f}".format(probe2range))
 
 
+
 # Constants
 
 totalSecondsInDay = 86400.0
 
-wateringCheckInterval = 3600 #Check every hour
+wateringCheckInterval = 900  # Check every 15 minutes
 
 pumpToggleThreshold = 0.7
 
@@ -52,45 +53,29 @@ postWaterDelayCheck = 60
 maxWaterPumpingPerDayInSeconds = 32
 maxWaterPumpingPerActivationInSeconds = 8
 maxPumpActivationsPerDay = int(maxWaterPumpingPerDayInSeconds / maxWaterPumpingPerActivationInSeconds)
-#print(maxPumpActivationsPerDay)
 
-preWateringMessage = "{0}\tPre Water Probe Reading\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f} --- Watering time: {3} seconds"
-postWateringMessage = "{0}\tPost Watering Probe Reading\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f}"
+
+preWateringMessage = "{0}\tPre Water Probe Reading\t\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f} --- Water time: {3} seconds"
+postWateringMessage = "{0}\tPost Water Probe Reading\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f}"
 maxWateringWarning = "{0}\tWARNING: Max watering threshold reached. Unable to water until {1}."
 baseReadingMessage = "{0}\tProbe Reading\t--- Moisture voltage: {1:.3f} --- Moisture ratio: {2:.3f}"
 
 
 
-
-
-
 # Variables
-waterTimingsPump1 = []
-#waterTimingsPump2 = []
+waterTimingsPump = []
 
 
-
-#testTime = datetime(2020, 11, 23, 12, 0, 0, 0)
-#waterTimingsPump1.append(testTime)
-#print(len(waterTimingsPump1))
-#print(waterTimingsPump1[0])
-
-
-#print("P1:\t{:>5}\t{:>5}\t{:>5}\t\tP2:\t{:>5}\t{:>5}\t{:>5}".format("raw", "v", "%", "raw", "v", "%"))
 
 while True:
 
-
   # Check oldest entry for potential removal
-  if (len(waterTimingsPump1) != 0):
+  if (len(waterTimingsPump) != 0):
     timeNow = datetime.now()
-    elapsed = timeNow - waterTimingsPump1[0]
-    #print(elapsed.total_seconds())
+    elapsed = timeNow - waterTimingsPump[0]
 
     if(elapsed.total_seconds() > totalSecondsInDay):
-      #print("Removing {0}".format(waterTimingsPump1[0]))
-      waterTimingsPump1.pop(0)
-
+      waterTimingsPump.pop(0)
 
 
   # Check the probe to see if should water
@@ -99,13 +84,14 @@ while True:
   if (probe1MoistureRatio > pumpToggleThreshold):
 
     # Ensure max watering threshold not exceeded
-    if (len(waterTimingsPump1) < maxPumpActivationsPerDay):
+    if (len(waterTimingsPump) < maxPumpActivationsPerDay):
 
       # Safe to water
       print(preWateringMessage.format(datetime.now(), chan1.voltage, probe1MoistureRatio, maxWaterPumpingPerActivationInSeconds))
 
+      waterTimingsPump.append(datetime.now())
       relay1.on()
-      sleep(maxWaterPumptingPerActivationInSeconds)
+      sleep(maxWaterPumpingPerActivationInSeconds)
       relay1.off()
       sleep(postWaterDelayCheck)
 
@@ -116,7 +102,7 @@ while True:
 
       # Unable to water due to max threshold reached.
       timeNow = datetime.now()
-      timeNext = waterTimingsPump1[0] + timedelta(days=1)
+      timeNext = waterTimingsPump[0] + timedelta(days=1)
 
       print(maxWateringWarning.format(timeNow, timeNext))
       print(baseReadingMessage.format(timeNow, chan1.voltage, probe1MoistureRatio))
@@ -127,25 +113,6 @@ while True:
     print(baseReadingMessage.format(datetime.now(), chan1.voltage, probe1MoistureRatio))
 
 
-  # TODO: Would need to repeat the code above for the 2nd pump relay...
-
-
   # Sleep until next check in timing.
   sleep(wateringCheckInterval)
-
-
-
-#  probe2MoistureRatio = (chan2.voltage - probe2wet) / probe2range
-
-#  if (probe1MoistureRatio < pumpToggleThreshold):
-#    chan1result = "P1-Off:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan1.value, chan1.voltage, probe1MoistureRatio)
-#  else:
-#    chan1result = "P1-On:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan1.value, chan1.voltage, probe1MoistureRatio)
-
-#  if (probe2MoistureRatio < pumpToggleThreshold):
-#    chan2result = "P2-Off:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan2.value, chan2.voltage, probe2MoistureRatio)
-#  else:
-#    chan2result = "P2-On:\t{:>5}\t{:>5.3f}\t{:>5.3f}".format(chan2.value, chan2.voltage, probe2MoistureRatio)
-
-#  print(chan1result + "\t\t" + chan2result)
 
