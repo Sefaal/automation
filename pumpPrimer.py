@@ -24,7 +24,7 @@ relay1 = OutputDevice(17, active_high=False, initial_value=False)
 relay2 = OutputDevice(27, active_high=False, initial_value=False)
 
 
-pumpPrimingTime = 30
+pumpPrimingTime = 10
 
 
 print("Pump Primer --- Pumps will run for {0} seconds!".format(pumpPrimingTime))
